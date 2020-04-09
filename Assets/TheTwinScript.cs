@@ -74,7 +74,7 @@ public class TheTwinScript : MonoBehaviour
 	private int _swapCase;
 	private bool _finishedTrading = false;
 	private readonly string[] _colorNames = new string[7] { "Red", "Green", "Blue", "Yellow", "White", "Purple", "Emerald" };
-
+	
 	//Logging
 	static int moduleIdCounter = 1;
 	private int _moduleId;
@@ -232,6 +232,7 @@ public class TheTwinScript : MonoBehaviour
 			if (_modulePair._moduleSolved) return;
 			if (index.ToString()[0] == _modulePair._finalSequence[_modulePair._currentDigit])
 			{
+				_modulePair.UpdateSubmissionDisplay();
 				_modulePair._currentDigit++;
 				if (_modulePair._currentDigit == _modulePair._finalSequence.Length)
 				{
@@ -252,6 +253,7 @@ public class TheTwinScript : MonoBehaviour
 			if (_moduleSolved) return;
 			if (index.ToString()[0] == _finalSequence[_currentDigit])
 			{
+				UpdateSubmissionDisplay();
 				_currentDigit++;
 				if (_currentDigit == _finalSequence.Length)
 				{
@@ -288,15 +290,15 @@ public class TheTwinScript : MonoBehaviour
 		_isPressed[index] = true;
 		Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
 		ButtonObjects[index].GetComponent<KMSelectable>().Highlight.transform.localPosition -= new Vector3(0, .05f, 0); 
-		for (int count = 0; count < 16; count++)
+		for (int count = 0; count < 6; count++)
         {
-			ButtonObjects[index].transform.localPosition -= new Vector3(0,.00025f,0);
-			yield return new WaitForSeconds(.01f);
+			ButtonObjects[index].transform.localPosition -= new Vector3(0,.00067f,0);
+			yield return new WaitForSeconds(.005f);
         }
-		for (int count = 0; count < 16; count++)
+		for (int count = 0; count < 6; count++)
 		{
-			ButtonObjects[index].transform.localPosition += new Vector3(0, .00025f, 0);
-			yield return new WaitForSeconds(.01f);
+			ButtonObjects[index].transform.localPosition += new Vector3(0, .00067f, 0);
+			yield return new WaitForSeconds(.005f);
 		}
 		ButtonObjects[index].GetComponent<KMSelectable>().Highlight.transform.localPosition += new Vector3(0, .05f, 0);
 		_isPressed[index] = false;
@@ -599,5 +601,15 @@ public class TheTwinScript : MonoBehaviour
 			ModulePairIdDisplay.text = "0" + num.ToString();
 		else
 			ModulePairIdDisplay.text = num.ToString();
+	}
+
+	private void UpdateSubmissionDisplay()
+	{
+		Debug.LogFormat("{0}", _currentDigit);
+		if (_currentDigit == _finalSequence.Length) return;
+		if (_currentDigit == 0)
+			UpdateStageScreen("-" + _finalSequence[0].ToString());
+		else
+			UpdateStageScreen(_finalSequence.Substring(_currentDigit - 1, 2));
 	}
 }

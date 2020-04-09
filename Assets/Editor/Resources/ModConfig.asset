@@ -14,7 +14,18 @@ MonoBehaviour:
   id: The Twin
   title: The Twin
   author: Kavinkul
-  description: 
-  version: 1.0
+  description: 'You may want to avoid seeing multiple of them at all costs.
+
+
+    Module Display Name: The Twin
+
+    Module ID: TheTwinModule
+
+
+    Manual: Coming Soon
+
+
+    TP is currently not possible with the current version of Twitch Plays.'
+  version: 1.1
   outputFolder: A:\Steam\steamapps\common\Keep Talking and Nobody Explodes\mods
   previewImage: {fileID: 2800000, guid: c7b9d7a99cb84424b84f58f43ec44217, type: 3}
