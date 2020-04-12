@@ -22,10 +22,10 @@ MonoBehaviour:
     Module ID: TheTwinModule
 
 
-    Manual: Coming Soon
+    Manual: https://ktane.timwi.de/HTML/The%20Twin.html
 
 
-    TP is currently not possible with the current version of Twitch Plays.'
-  version: 1.1
+    TP Supported'
+  version: 1.3
   outputFolder: A:\Steam\steamapps\common\Keep Talking and Nobody Explodes\mods
   previewImage: {fileID: 2800000, guid: c7b9d7a99cb84424b84f58f43ec44217, type: 3}

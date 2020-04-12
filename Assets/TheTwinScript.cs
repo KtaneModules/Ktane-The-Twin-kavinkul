@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 using KModkit;
@@ -14,13 +15,21 @@ public class TheTwinScript : MonoBehaviour
 	public KMBombInfo Info;
 	public KMBossModule BossHandler;
 	public GameObject ModuleObject;
-	public GameObject StatusLight;
+	public Transform StatusLight;
+	public FakeStatusLight FakeStatusLight;
 	public GameObject ScreensAndButtons;
 	public GameObject[] ButtonObjects;
 	public TextMesh StageDisplay;
 	public TextMesh ModulePairIdDisplay;
 	public Renderer ModuleBackground;
 	public Material[] BackgroundColor;
+
+	sealed class TheTwinSettings
+	{
+		public int SecondDelay = 0;
+	};
+
+	private TheTwinSettings Settings;
 
 	sealed class TheTwinBombInfo
     {
@@ -74,7 +83,8 @@ public class TheTwinScript : MonoBehaviour
 	private int _swapCase;
 	private bool _finishedTrading = false;
 	private readonly string[] _colorNames = new string[7] { "Red", "Green", "Blue", "Yellow", "White", "Purple", "Emerald" };
-	
+	private bool _allowTPInteraction = true;
+
 	//Logging
 	static int moduleIdCounter = 1;
 	private int _moduleId;
@@ -84,6 +94,9 @@ public class TheTwinScript : MonoBehaviour
     {
 		_moduleId = moduleIdCounter++;
 		_isPressed = new bool[ButtonObjects.Length];
+		var modConfig = new ModConfig<TheTwinSettings>("TheTwin");
+		Settings = modConfig.Settings;
+		modConfig.Settings = Settings;
 	}
 
 	void Start () 
@@ -124,6 +137,14 @@ public class TheTwinScript : MonoBehaviour
 			ButtonObjects[index].GetComponent<KMSelectable>().OnInteract += delegate () { PressButton(j); return false; };
 		}
 
+		FakeStatusLight = Instantiate(FakeStatusLight);
+		FakeStatusLight.transform.SetParent(transform, false);
+		if (Module != null)
+			FakeStatusLight.Module = Module;
+
+		FakeStatusLight.GetStatusLights(StatusLight);
+		FakeStatusLight.SetInActive();
+
 		var serialNumber = Info.GetSerialNumber();
 		if (!_TheTwinInfos.ContainsKey(serialNumber))
 			_TheTwinInfos[serialNumber] = new TheTwinBombInfo();
@@ -135,9 +156,9 @@ public class TheTwinScript : MonoBehaviour
 		{
 			ModuleObject.transform.localScale = new Vector3(-1f, 1f, 1f);
 			ScreensAndButtons.transform.localScale = new Vector3(-1f, 1f, 1f);
-			Vector3 position = StatusLight.transform.localPosition;
+			Vector3 position = StatusLight.localPosition;
 			position.x *= -1;
-			StatusLight.transform.localPosition = position;
+			StatusLight.localPosition = position;
 		}
 		UpdatePairIdScreen(_modulePairId);
 
@@ -181,10 +202,8 @@ public class TheTwinScript : MonoBehaviour
 	{
 		if (_autoSolved)
 		{
-			Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
-			Module.HandlePass();
+			StartCoroutine(Solve(this));
 			_isReady = true;
-			_moduleSolved = true;
 			_autoSolved = false;
 		}
 		if (_moduleSolved || !_isActivated || !_cycleCompleted || _isReady) return;
@@ -224,7 +243,7 @@ public class TheTwinScript : MonoBehaviour
 		if (!_isReady)
         {
 			Debug.LogFormat("[The Twin #{0}] Module is not ready to be solved. Initiating a strike.", _moduleId);
-			Module.HandleStrike();
+			Strike(this);
 			return;
         }
 		if (_modulePair != null)
@@ -237,15 +256,13 @@ public class TheTwinScript : MonoBehaviour
 				if (_modulePair._currentDigit == _modulePair._finalSequence.Length)
 				{
 					Debug.LogFormat("[The Twin #{0}] All digits entered are correct! Solving The Twin #{1}.", _moduleId, _modulePair._moduleId);
-					_modulePair.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
-					_modulePair.Module.HandlePass();
-					_modulePair._moduleSolved = true;
+					StartCoroutine(Solve(_modulePair));
 				}
 			}
 			else
 			{
 				Debug.LogFormat("[The Twin #{0}] The {1} digit of The Twin #{2} is {3}. Entered {4}. Not correct. Initiating a strike on The Twin #{5}.", _moduleId, _modulePair._moduleId, Ordinal(_modulePair._currentDigit + 1), _modulePair._finalSequence[_modulePair._currentDigit], index, _modulePair._moduleId);
-				_modulePair.Module.HandleStrike();
+				Strike(_modulePair);
 			}
 		}
 		else
@@ -258,17 +275,38 @@ public class TheTwinScript : MonoBehaviour
 				if (_currentDigit == _finalSequence.Length)
 				{
 					Debug.LogFormat("[The Twin #{0}] All digits entered are correct! Solving the module.", _moduleId);
-					Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
-					Module.HandlePass();
-					_moduleSolved = true;
+					StartCoroutine(Solve(this));
 				}
 			}
 			else
 			{
 				Debug.LogFormat("[The Twin #{0}] The {1} digit is {2}. Entered {3}. Not correct. Initiating a strike.", _moduleId, Ordinal(_currentDigit + 1), _finalSequence[_currentDigit], index);
-				Module.HandleStrike();
+				Strike(this);
 			}
 		}
+    }
+
+	private void Strike(TheTwinScript module)
+    {
+		module.FakeStatusLight.FlashStrike();
+		Module.HandleStrike();
+    }
+
+	private IEnumerator Solve(TheTwinScript module)
+    {
+		module.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.CorrectChime, transform);
+		_allowTPInteraction = false;
+		module._moduleSolved = true;
+		module.FakeStatusLight.HandlePass(StatusLightState.Green);
+		while (!_moduleSolved)
+			yield return new WaitForSeconds(.1f);
+		if (_modulePair != null && Settings.SecondDelay > 0)
+        {
+			Debug.LogFormat("[The Twin #{0}] Reached?.", _moduleId);
+			if (this._moduleId > _modulePair._moduleId)
+				yield return new WaitForSeconds(Settings.SecondDelay);
+        }
+		Module.HandlePass();
     }
 
 	private string Ordinal(int index)
@@ -605,11 +643,79 @@ public class TheTwinScript : MonoBehaviour
 
 	private void UpdateSubmissionDisplay()
 	{
-		Debug.LogFormat("{0}", _currentDigit);
 		if (_currentDigit == _finalSequence.Length) return;
 		if (_currentDigit == 0)
 			UpdateStageScreen("-" + _finalSequence[0].ToString());
 		else
 			UpdateStageScreen(_finalSequence.Substring(_currentDigit - 1, 2));
+	}
+
+	
+	#pragma warning disable 414
+	private readonly string TwitchHelpMessage = "Use !{0} submit 12 6 7 to submit 1267. The number must be in the range 0 - 9.";
+	#pragma warning restore 414
+
+	public IEnumerator TwitchHandleForcedSolve()
+	{
+		while (!_isReady)
+		{
+			yield return true;
+		}
+		string submissionString = "submit ";
+		if (_modulePair != null)
+		{
+			submissionString += _modulePair._finalSequence.Substring(_modulePair._currentDigit);
+		}
+		else
+		{
+			submissionString += _finalSequence.Substring(_currentDigit);
+		}
+		yield return ProcessTwitchCommand(submissionString);
+		while (!_moduleSolved)
+		{
+			yield return true;
+		}
+		yield break;
+	}
+
+	public IEnumerator ProcessTwitchCommand(string command)
+	{
+		if (!_allowTPInteraction)
+		{
+			yield return "sendtochaterror This module is currently being solved.";
+			yield break;
+		}
+		string[] parameters = command.Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
+		if (Regex.IsMatch(parameters[0], "^\\s*submit\\s*", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) && parameters.Length >= 2)
+		{
+			string submitSequence = string.Empty;
+			for (int i = 0; i < parameters.Length - 1; i++)
+			{
+				submitSequence += parameters[i + 1];
+			}
+			int number;
+			if (!int.TryParse(submitSequence, out number))
+			{
+				yield return "sendtochaterror Unexpected characters was detected.";
+				yield break;
+			}
+			yield return null;
+			for (int step = 0; step < submitSequence.Length; step++)
+			{
+				int index = int.Parse(submitSequence.Substring(step, 1));
+				while (_isPressed[index])
+				{
+					yield return new WaitForSeconds(0.1f);
+				}
+				ButtonObjects[index].GetComponent<KMSelectable>().OnInteract.Invoke();
+				yield return new WaitForSeconds(0.1f);
+				yield return "Solve";
+			}
+		}
+		else
+		{
+			yield return "sendtochaterror Missing 'submit' or not enough arguments.";
+		}
+		yield break;
 	}
 }

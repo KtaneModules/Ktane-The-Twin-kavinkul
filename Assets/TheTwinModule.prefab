@@ -1001,7 +1001,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 4547315431793698}
-  m_RootOrder: 1
+  m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &4060025236757478
 Transform:
@@ -1400,8 +1400,8 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 4896865287133680}
-  - {fileID: 4058952628923350}
   - {fileID: 4560865999349804}
+  - {fileID: 4058952628923350}
   m_Father: {fileID: 4093871535845384}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1418,7 +1418,7 @@ Transform:
   - {fileID: 4172145649005008}
   - {fileID: 4042396143140516}
   m_Father: {fileID: 4547315431793698}
-  m_RootOrder: 2
+  m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!4 &4573447368068560
 Transform:
@@ -3208,7 +3208,9 @@ MonoBehaviour:
   Info: {fileID: 114613827870572138}
   BossHandler: {fileID: 114614491895861100}
   ModuleObject: {fileID: 1249702697005358}
-  StatusLight: {fileID: 1441294967289600}
+  StatusLight: {fileID: 4896865287133680}
+  FakeStatusLight: {fileID: 114000014185360736, guid: cd81e29f612d2154e9d4fe587a7deb84,
+    type: 2}
   ScreensAndButtons: {fileID: 1731010407001752}
   ButtonObjects:
   - {fileID: 1223058533955468}
