@@ -344,7 +344,7 @@ public class TheTwinScript : MonoBehaviour
 
     private void GenerateRemoveSets()
     {
-        bool[] changeRemoveSet = { false, false, false, false, false, false, true };
+        bool[] changeRemoveSet = { false, false, false, false, false, true };
         changeRemoveSet = changeRemoveSet.Shuffle();
         int tries = 0;
         _removeSetList.Add(_removeSet);
@@ -352,15 +352,21 @@ public class TheTwinScript : MonoBehaviour
         {
             _direction = Rnd.Range(0, 4);
             NextPositionInGrids(_direction);
-            _changeRemoveSet.Add(changeRemoveSet[tries]);
+            if (tries < 4)
+            {
+                _changeRemoveSet.Add(false);
+                tries++;
+                continue;
+            }
+            _changeRemoveSet.Add(changeRemoveSet[tries - 4]);
 
             //If this is the last digit, then there is no reason to reassign the remove set.
             if (count == _sequenceLength - 1)
             {
                 _changeRemoveSet[count] = false;
-                changeRemoveSet[tries] = false;
+                changeRemoveSet[tries - 4] = false;
             }
-            if (changeRemoveSet[tries])
+            if (changeRemoveSet[tries - 4])
             {
                 _removeSetList.Add(_removeGrid[_currentCoordinate[1]][_currentCoordinate[0]]);
                 changeRemoveSet = changeRemoveSet.Shuffle();
