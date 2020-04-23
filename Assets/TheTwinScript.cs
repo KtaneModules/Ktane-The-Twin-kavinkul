@@ -42,6 +42,7 @@ public class TheTwinScript : MonoBehaviour
     private bool _isReady = false;
     private bool[] _isPressed;
     private int _startingNumber;
+    private int _stageZeroScreenNumber;
     private int _sequenceLength = 0;
     private int _totalModules;
     private string _finalSequence = "";
@@ -72,7 +73,8 @@ public class TheTwinScript : MonoBehaviour
     private List<int> _stageColor = new List<int>();
     private List<string> _removeSetList = new List<string>();
     private List<bool> _changeRemoveSet = new List<bool>();
-    private Coroutine ActiveCoroutine;
+    private List<IEnumerator> _activeCoroutines = new List<IEnumerator>();
+    private Coroutine _activeCoroutine;
     private bool _isActivated = false;
     private bool _autoSolved = false;
     private bool _cycleCompleted = true;
@@ -164,7 +166,8 @@ public class TheTwinScript : MonoBehaviour
 
         _startingNumber = Rnd.Range(0, 100);
         Debug.LogFormat("[The Twin #{0}] The initial number is {1}.", _moduleId, _startingNumber);
-        UpdateStageScreen(_startingNumber);
+        _stageZeroScreenNumber = _startingNumber;
+        UpdateStageScreen("--");
         _startingCoordinate[0] = Rnd.Range(0, 12);
         _startingCoordinate[1] = Rnd.Range(0, 10);
         Debug.LogFormat("[The Twin #{0}] The starting coordinate in remove table is ({1}, {2}).", _moduleId, _startingCoordinate[0], _startingCoordinate[1]);
@@ -190,7 +193,7 @@ public class TheTwinScript : MonoBehaviour
             else
             {
                 _isActivated = true;
-                _sequenceLength = 3 * (_totalModules - 1);
+                _sequenceLength = 2 * (_totalModules - 1);
                 Debug.LogFormat("[The Twin #{0}] The initial remove set is {1}.", _moduleId, _removeSet);
                 Generate();
             }
@@ -210,8 +213,14 @@ public class TheTwinScript : MonoBehaviour
         int solveCount = Info.GetSolvedModuleNames().Where(a => !_ignoredModules.Contains(a)).ToList().Count;
         if (_totalModules == solveCount && _currentStage >= solveCount)
         {
-            if (ActiveCoroutine != null)
-                StopCoroutine(ActiveCoroutine);
+            if (_activeCoroutines.Count != 0)
+            {
+                StopCoroutine(_activeCoroutines.Last());
+                _activeCoroutines.Clear();
+            }
+            if (_activeCoroutine != null)
+                StopCoroutine(_activeCoroutine);
+            _activeCoroutine = null;
             _isReady = true;
             UpdateStageScreen("--");
             ModuleBackground.material = BackgroundColor[0];
@@ -224,14 +233,19 @@ public class TheTwinScript : MonoBehaviour
             if (_currentStage == _totalModules) return;
             _cycleCompleted = false;
             UpdateStageScreen(_currentStage);
-            if (ActiveCoroutine != null)
-                StopCoroutine(ActiveCoroutine);
-            ActiveCoroutine = StartCoroutine(CycleColor());
+            if (_activeCoroutines.Count != 0)
+            {
+                StopCoroutine(_activeCoroutines.Last());
+                _activeCoroutines.Clear();
+            }
+            if (_activeCoroutine != null)
+                StopCoroutine(_activeCoroutine);
+            _activeCoroutine = StartCoroutine(CycleColor());
         }
         else if (solveCount == 0)
         {
-            if (ActiveCoroutine == null)
-                ActiveCoroutine = StartCoroutine(DisplayCode());
+            if (_activeCoroutine == null)
+                _activeCoroutine = StartCoroutine(DisplayCode());
         }
     }
 
@@ -249,9 +263,12 @@ public class TheTwinScript : MonoBehaviour
         if (_modulePair != null)
         {
             if (_modulePair._moduleSolved) return;
+            StopInternalCoroutines();
+            _modulePair.StopInternalCoroutines();
             if (index.ToString()[0] == _modulePair._finalSequence[_modulePair._currentDigit])
             {
-                _modulePair.UpdateSubmissionDisplay();
+                UpdateSubmissionDisplay(_modulePair);
+                UpdateSubmissionDisplay(this);
                 _modulePair._currentDigit++;
                 if (_modulePair._currentDigit == _modulePair._finalSequence.Length)
                 {
@@ -261,16 +278,17 @@ public class TheTwinScript : MonoBehaviour
             }
             else
             {
-                Debug.LogFormat("[The Twin #{0}] The {1} digit of The Twin #{2} is {3}. Entered {4}. Not correct. Initiating a strike on The Twin #{5}.", _moduleId, _modulePair._moduleId, Ordinal(_modulePair._currentDigit + 1), _modulePair._finalSequence[_modulePair._currentDigit], index, _modulePair._moduleId);
+                Debug.LogFormat("[The Twin #{0}] The {1} digit of The Twin #{2} is {3}. Entered {4}. Not correct. Initiating a strike on The Twin #{5}.", _moduleId, Ordinal(_modulePair._currentDigit + 1), _modulePair._moduleId, _modulePair._finalSequence[_modulePair._currentDigit], index, _modulePair._moduleId);
                 Strike(_modulePair);
             }
         }
         else
         {
             if (_moduleSolved) return;
+            StopInternalCoroutines();
             if (index.ToString()[0] == _finalSequence[_currentDigit])
             {
-                UpdateSubmissionDisplay();
+                UpdateSubmissionDisplay(this);
                 _currentDigit++;
                 if (_currentDigit == _finalSequence.Length)
                 {
@@ -290,6 +308,14 @@ public class TheTwinScript : MonoBehaviour
     {
         module.FakeStatusLight.FlashStrike();
         Module.HandleStrike();
+        if (!_isReady) return;
+        _activeCoroutines.Add(CycleColorOnStrike());
+        StartCoroutine(_activeCoroutines.Last());
+        if(_modulePair != null)
+        {
+            _modulePair._activeCoroutines.Add(_modulePair.CycleColorOnStrike());
+            _modulePair.StartCoroutine(_modulePair._activeCoroutines.Last());
+        }
     }
 
     private IEnumerator Solve(TheTwinScript module)
@@ -307,6 +333,16 @@ public class TheTwinScript : MonoBehaviour
                 yield return new WaitForSeconds(Settings.SecondDelay);
         }
         Module.HandlePass();
+    }
+
+    private void StopInternalCoroutines()
+    {
+        if (_activeCoroutines.Count != 0)
+        {
+            StopCoroutine(_activeCoroutines.Last());
+            ModuleBackground.material = BackgroundColor[0];
+            _activeCoroutines.Clear();
+        }
     }
 
     private string Ordinal(int index)
@@ -344,7 +380,7 @@ public class TheTwinScript : MonoBehaviour
 
     private void GenerateRemoveSets()
     {
-        bool[] changeRemoveSet = { false, false, false, false, false, true };
+        bool[] changeRemoveSet = { false, false, false, true };
         changeRemoveSet = changeRemoveSet.Shuffle();
         int tries = 0;
         _removeSetList.Add(_removeSet);
@@ -576,18 +612,45 @@ public class TheTwinScript : MonoBehaviour
         int backgroundCycleStep = 0;
         while (true)
         {
-            int[] color = new int[4] { 0, _stageColor[3 * (_currentStage - 1)], _stageColor[3 * (_currentStage - 1) + 1], _stageColor[3 * (_currentStage - 1) + 2] };
-            bool[] textIsRed = new bool[4] { false, _changeRemoveSet[3 * (_currentStage - 1)], _changeRemoveSet[3 * (_currentStage - 1) + 1], _changeRemoveSet[3 * (_currentStage - 1) + 2] };
+            int[] color = new int[3] { 0, _stageColor[2 * (_currentStage - 1)], _stageColor[2 * (_currentStage - 1) + 1] };
+            bool[] textIsRed = new bool[3] { false, _changeRemoveSet[2 * (_currentStage - 1)], _changeRemoveSet[2 * (_currentStage - 1) + 1] };
             ModuleBackground.material = BackgroundColor[color[backgroundCycleStep]];
             StageDisplay.color = textIsRed[backgroundCycleStep] ? Color.red : Color.white;
-            backgroundCycleStep = (backgroundCycleStep + 1) % 4;
+            backgroundCycleStep = (backgroundCycleStep + 1) % 3;
             yield return new WaitForSeconds(1);
             if (backgroundCycleStep == 0)
                 _cycleCompleted = true;
         }
     }
 
+    private IEnumerator CycleColorOnStrike()
+    {
+        while (true)
+        {
+            _activeCoroutines.Add(DisplayCode());
+            yield return StartCoroutine(_activeCoroutines.Last());
+            _activeCoroutines.RemoveAt(_activeCoroutines.Count - 1);
+            for (int index = 0; index < _sequenceLength; index++)
+            {
+                UpdateStageScreen(index / 2 + 1);
+                ModuleBackground.material = BackgroundColor[_stageColor[index]];
+                StageDisplay.color = _changeRemoveSet[index] ? Color.red : Color.white;
+                yield return new WaitForSeconds(1);
+            }
+            _activeCoroutines.Add(DisplayCode(_currentDigit + 1));
+            yield return StartCoroutine(_activeCoroutines.Last());
+            _activeCoroutines.RemoveAt(_activeCoroutines.Count - 1);
+        }
+    }
+
     private IEnumerator DisplayCode()
+    {
+        _activeCoroutines.Add(DisplayCode(0));
+        yield return StartCoroutine(_activeCoroutines.Last());
+        _activeCoroutines.RemoveAt(_activeCoroutines.Count - 1);
+    }
+
+    private IEnumerator DisplayCode(int number)
     {
         int[][] colorOrder = new int[12][] { new int[5] { 1, 6, 5, 4, 3 },
                                              new int[5] { 2, 7, 5, 1, 6 },
@@ -605,20 +668,46 @@ public class TheTwinScript : MonoBehaviour
         float dotLength = .27f;
         ModuleBackground.material = BackgroundColor[0];
         yield return new WaitForSeconds(dotLength * 3);
-        while (true)
+        do
         {
-            for (int step = 0; step < 5; step++)
+            if (number == 0)
             {
-                ModuleBackground.material = BackgroundColor[colorOrder[_startingCoordinate[0]][step]];
-                if (morseCode[_startingCoordinate[1]][step] == '-')
-                    yield return new WaitForSeconds(dotLength * 3);
-                else
+                UpdateStageScreen(_stageZeroScreenNumber);
+                for (int step = 0; step < 5; step++)
+                {
+                    ModuleBackground.material = BackgroundColor[colorOrder[_startingCoordinate[0]][step]];
+                    if (morseCode[_startingCoordinate[1]][step] == '-')
+                        yield return new WaitForSeconds(dotLength * 3);
+                    else
+                        yield return new WaitForSeconds(dotLength);
+                    ModuleBackground.material = BackgroundColor[0];
                     yield return new WaitForSeconds(dotLength);
-                ModuleBackground.material = BackgroundColor[0];
-                yield return new WaitForSeconds(dotLength);
+                }
+                yield return new WaitForSeconds(dotLength * 2);
             }
-            yield return new WaitForSeconds(dotLength * 2);
+            else
+            {
+                UpdateStageScreen("--");
+                string numString = number.ToString();
+                for (int index = 0; index < numString.Length; index++)
+                {
+                    int digit = 0;
+                    int.TryParse(numString.Substring(index, 1), out digit);
+                    for (int step = 0; step < 5; step++)
+                    {
+                        ModuleBackground.material = BackgroundColor[5];
+                        if (morseCode[digit][step] == '-')
+                            yield return new WaitForSeconds(dotLength * 3);
+                        else
+                            yield return new WaitForSeconds(dotLength);
+                        ModuleBackground.material = BackgroundColor[0];
+                        yield return new WaitForSeconds(dotLength);
+                    }
+                    yield return new WaitForSeconds(dotLength * 2);
+                }
+            }
         }
+        while (!_isReady);
     }
 
     private void UpdateStageScreen(int number)
@@ -647,13 +736,20 @@ public class TheTwinScript : MonoBehaviour
             ModulePairIdDisplay.text = num.ToString();
     }
 
-    private void UpdateSubmissionDisplay()
+    private void UpdateSubmissionDisplay(TheTwinScript module)
     {
-        if (_currentDigit == _finalSequence.Length) return;
-        if (_currentDigit == 0)
-            UpdateStageScreen("-" + _finalSequence[0].ToString());
+        int currentDigit;
+        if (_modulePair != null && _moduleId == module._moduleId)
+            currentDigit = module._currentDigit - 1;
         else
-            UpdateStageScreen(_finalSequence.Substring(_currentDigit - 1, 2));
+            currentDigit = module._currentDigit;
+        if (currentDigit >= module._finalSequence.Length) return;
+        if (currentDigit == 0)
+            module.UpdateStageScreen("-" + module._finalSequence[0].ToString());
+        else if (currentDigit < 0)
+            module.UpdateStageScreen("--");
+        else
+            module.UpdateStageScreen(module._finalSequence.Substring(currentDigit - 1, 2));
     }
 
     
