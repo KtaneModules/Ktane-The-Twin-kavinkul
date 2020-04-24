@@ -341,6 +341,7 @@ public class TheTwinScript : MonoBehaviour
         {
             StopCoroutine(_activeCoroutines.Last());
             ModuleBackground.material = BackgroundColor[0];
+			StageDisplay.color = Color.white;
             _activeCoroutines.Clear();
         }
     }
