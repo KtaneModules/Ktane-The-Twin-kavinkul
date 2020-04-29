@@ -752,7 +752,6 @@ public class TheTwinScript : MonoBehaviour
         else
             module.UpdateStageScreen(module._finalSequence.Substring(currentDigit - 1, 2));
     }
-
     
     #pragma warning disable 414
     private readonly string TwitchHelpMessage = "Use !{0} submit 12 6 7 to submit 1267. The number must be in the range 0 - 9.";
@@ -797,7 +796,7 @@ public class TheTwinScript : MonoBehaviour
                 int index = int.Parse(submitSequence.Substring(step, 1));
                 while (_isPressed[index])
                     yield return new WaitForSeconds(0.1f);
-                ButtonObjects[index].GetComponent<KMSelectable>().OnInteract.Invoke();
+                ButtonObjects[index].GetComponent<KMSelectable>().OnInteract();
                 yield return new WaitForSeconds(0.1f);
                 yield return "Solve";
             }
