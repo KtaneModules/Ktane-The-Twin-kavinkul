@@ -207,7 +207,6 @@ public class TheTwinScript : MonoBehaviour
         {
             StartCoroutine(Solve(this));
             _isReady = true;
-            _autoSolved = false;
         }
         if (_moduleSolved || !_isActivated || !_cycleCompleted || _isReady) return;
         int solveCount = Info.GetSolvedModuleNames().Where(a => !_ignoredModules.Contains(a)).ToList().Count;
@@ -324,14 +323,17 @@ public class TheTwinScript : MonoBehaviour
         _allowTPInteraction = false;
         module._moduleSolved = true;
         module.FakeStatusLight.HandlePass(StatusLightState.Green);
+        if (_autoSolved)
+        {
+            Module.HandlePass();
+            _autoSolved = false;
+            yield break;
+        }
         while (!_moduleSolved)
             yield return new WaitForSeconds(.1f);
         if (_modulePair != null && Settings.SecondDelay > 0)
-        {
-            Debug.LogFormat("[The Twin #{0}] Reached?.", _moduleId);
             if (this._moduleId > _modulePair._moduleId)
                 yield return new WaitForSeconds(Settings.SecondDelay);
-        }
         Module.HandlePass();
     }
 
@@ -341,7 +343,7 @@ public class TheTwinScript : MonoBehaviour
         {
             StopCoroutine(_activeCoroutines.Last());
             ModuleBackground.material = BackgroundColor[0];
-			StageDisplay.color = Color.white;
+            StageDisplay.color = Color.white;
             _activeCoroutines.Clear();
         }
     }
