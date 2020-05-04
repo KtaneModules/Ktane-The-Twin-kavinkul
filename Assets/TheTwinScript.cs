@@ -86,6 +86,7 @@ public class TheTwinScript : MonoBehaviour
     private bool _finishedTrading = false;
     private readonly string[] _colorNames = new string[7] { "Red", "Green", "Blue", "Yellow", "White", "Purple", "Emerald" };
     private bool _allowTPInteraction = true;
+    private int _twitchPlaysBonusPoints = 0;
 
     //Logging
     static int moduleIdCounter = 1;
@@ -534,6 +535,7 @@ public class TheTwinScript : MonoBehaviour
         }
     }
 
+    //Using IEnumerator because a different IEnumerator has to ensure the completion of this function before continuing.
     private IEnumerator GenerateFinalString()
     {
         int removeSetIndex = 0;
@@ -554,6 +556,9 @@ public class TheTwinScript : MonoBehaviour
         _isGenerated = true;
 
         Debug.LogFormat("[The Twin #{0}] The final sequence is {1}.", _moduleId, _finalSequence);
+
+        //Make sure that the modules have finished generation before calculating points for Twitch Plays.
+        CalculateTwitchPlaysPoint();
 
         yield return null;
     }
@@ -755,6 +760,36 @@ public class TheTwinScript : MonoBehaviour
             module.UpdateStageScreen(module._finalSequence.Substring(currentDigit - 1, 2));
     }
     
+    //Twitch Plays
+
+    private void CalculateTwitchPlaysPoint()
+    {
+        if (_modulePair == null)
+        {
+            _twitchPlaysBonusPoints = 0;
+            return;
+        }
+        //For consistency with Twitch Plays, count all solvable modules including ignored modules.
+        int totalModules = Info.GetSolvableModuleNames().Count;
+        float bonusPoints = 0;
+        switch(_swapCase)
+        {
+            case 0: //Red Case
+                bonusPoints = 0.5f * totalModules;
+                break;
+            case 1: //Green Case
+                bonusPoints = 5f;
+                break;
+            case 2: //Blue Case
+                bonusPoints = 0.25f * totalModules;
+                break;
+            case 3: //Yellow Case
+                bonusPoints = 0.5f * totalModules;
+                break;
+        }
+        _twitchPlaysBonusPoints = Math.Max(5, Mathf.RoundToInt(bonusPoints));
+    }
+
     #pragma warning disable 414
     private readonly string TwitchHelpMessage = "Use !{0} submit 12 6 7 to submit 1267. The number must be in the range 0 - 9.";
     #pragma warning restore 414
@@ -798,9 +833,12 @@ public class TheTwinScript : MonoBehaviour
                 int index = int.Parse(submitSequence.Substring(step, 1));
                 while (_isPressed[index])
                     yield return new WaitForSeconds(0.1f);
+                yield return "trycancel";
                 ButtonObjects[index].GetComponent<KMSelectable>().OnInteract();
                 yield return new WaitForSeconds(0.1f);
                 yield return "Solve";
+                if (_modulePair != null)
+                    yield return String.Format("awardpointsonsolve {0}", _twitchPlaysBonusPoints);
             }
         }
         else
