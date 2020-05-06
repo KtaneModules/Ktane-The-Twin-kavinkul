@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using TheTwin;
 
 public class FakeStatusLight : MonoBehaviour
 {
@@ -29,9 +30,9 @@ public class FakeStatusLight : MonoBehaviour
     {
         _passedForReal = true;
         _flashingStrike = false;
-		if (_flashingStrikeCoRoutine != null)
+        if (_flashingStrikeCoRoutine != null)
             StopCoroutine(_flashingStrikeCoRoutine);
-		_flashingStrikeCoRoutine = null;
+        _flashingStrikeCoRoutine = null;
         return SetLightColor(state);
     }
 
@@ -143,16 +144,8 @@ public class FakeStatusLight : MonoBehaviour
         _flashingStrike = true;
         yield return new WaitForSeconds(blinkTime);
         _flashingStrike = false;
-		SetInActive();
-		Update();
+        SetInActive();
+        Update();
         _flashingStrikeCoRoutine = null;
     }
-}
-
-public enum StatusLightState
-{
-    Off,
-    Green,
-    Red,
-    Random
 }

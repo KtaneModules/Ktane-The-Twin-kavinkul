@@ -4,63 +4,66 @@ using System;
 using System.IO;
 using UnityEngine;
 
-class ModConfig<T>
+namespace TheTwin
 {
-    public ModConfig(string filename)
+    class ModConfig<T>
     {
-		SettingsPath = Path.Combine(Path.Combine(Application.persistentDataPath, "Modsettings"), filename + ".json");
-    }
-
-	readonly string SettingsPath = null;
-
-	public string SerializeSettings(T settings)
-	{
-		return JsonConvert.SerializeObject(settings, Formatting.Indented, new StringEnumConverter());
-	}
-
-	static readonly object settingsFileLock = new object();
-
-	public T Settings
-    {
-        get
+        public ModConfig(string filename)
         {
-            try
-            {
-				lock(settingsFileLock)
-				{
-					if (!File.Exists(SettingsPath))
-					{
-						File.WriteAllText(SettingsPath, SerializeSettings(Activator.CreateInstance<T>()));
-					}
+            SettingsPath = Path.Combine(Path.Combine(Application.persistentDataPath, "Modsettings"), filename + ".json");
+        }
 
-					T deserialized = JsonConvert.DeserializeObject<T>(
-						File.ReadAllText(SettingsPath),
-						new JsonSerializerSettings { Error = (object sender, Newtonsoft.Json.Serialization.ErrorEventArgs args) => args.ErrorContext.Handled = true }
-					);
-					return deserialized != null ? deserialized : Activator.CreateInstance<T>();
-				}
-            }
-            catch(Exception e)
+        readonly string SettingsPath = null;
+
+        public string SerializeSettings(T settings)
+        {
+            return JsonConvert.SerializeObject(settings, Formatting.Indented, new StringEnumConverter());
+        }
+
+        static readonly object settingsFileLock = new object();
+
+        public T Settings
+        {
+            get
             {
-				Debug.LogException(e);
-                return Activator.CreateInstance<T>();
+                try
+                {
+                    lock(settingsFileLock)
+                    {
+                        if (!File.Exists(SettingsPath))
+                        {
+                            File.WriteAllText(SettingsPath, SerializeSettings(Activator.CreateInstance<T>()));
+                        }
+
+                        T deserialized = JsonConvert.DeserializeObject<T>(
+                            File.ReadAllText(SettingsPath),
+                            new JsonSerializerSettings { Error = (object sender, Newtonsoft.Json.Serialization.ErrorEventArgs args) => args.ErrorContext.Handled = true }
+                        );
+                        return deserialized != null ? deserialized : Activator.CreateInstance<T>();
+                    }
+                }
+                catch(Exception e)
+                {
+                    Debug.LogException(e);
+                    return Activator.CreateInstance<T>();
+                }
+            }
+
+            set
+            {
+                if (value.GetType() == typeof(T))
+                {
+                    lock (settingsFileLock)
+                    {
+                        File.WriteAllText(SettingsPath, SerializeSettings(value));
+                    }
+                }
             }
         }
 
-        set
+        public override string ToString()
         {
-            if (value.GetType() == typeof(T))
-            {
-				lock (settingsFileLock)
-				{
-					File.WriteAllText(SettingsPath, SerializeSettings(value));
-				}
-			}
+            return SerializeSettings(Settings);
         }
-    }
-
-    public override string ToString()
-    {
-        return SerializeSettings(Settings);
     }
 }
