@@ -24,6 +24,7 @@ public class TheTwinScript : MonoBehaviour
     public TextMesh ModulePairIdDisplay;
     public Renderer ModuleBackground;
     public Material[] BackgroundColor;
+    public KMSelectable MainSelectable;
 
     sealed class TheTwinSettings
     {
@@ -163,6 +164,7 @@ public class TheTwinScript : MonoBehaviour
             Vector3 position = StatusLight.localPosition;
             position.x *= -1;
             StatusLight.localPosition = position;
+            UpdateSelectable();
         }
         UpdatePairIdScreen(_modulePairId);
 
@@ -248,6 +250,17 @@ public class TheTwinScript : MonoBehaviour
             if (_activeCoroutine == null)
                 _activeCoroutine = StartCoroutine(DisplayCode());
         }
+    }
+
+    private void UpdateSelectable()
+    {
+        List<KMSelectable> selectableList = new List<KMSelectable>();
+        for (int row = 0; row < 2; row++)
+            for (int col = 4; col >= 0; col--)
+                selectableList.Add(ButtonObjects[5 * row + col].GetComponent<KMSelectable>());
+        MainSelectable.Children = selectableList.ToArray();
+        MainSelectable.UpdateChildren();
+        Debug.LogFormat("Selectable {0}", transform.GetComponent<KMSelectable>().Children[1]);
     }
 
     private void PressButton(int index)

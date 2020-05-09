@@ -3235,6 +3235,7 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 3421533f0b1519c4aa1650ef84ef1227, type: 2}
   - {fileID: 2100000, guid: 0c7b4f93643bfb74a8602f9253e4a341, type: 2}
   - {fileID: 2100000, guid: f656ec4a9b3847e4ea63199481e46f87, type: 2}
+  MainSelectable: {fileID: 114688211924283366}
 --- !u!114 &114219190225588360
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -3586,7 +3587,7 @@ MonoBehaviour:
   - {fileID: 114114426706915160}
   - {fileID: 114803562771520762}
   IsPassThrough: 0
-  ChildRowLength: 0
+  ChildRowLength: 5
   Highlight: {fileID: 114647568530774792}
   SelectableColliders: []
   DefaultSelectableIndex: 0
