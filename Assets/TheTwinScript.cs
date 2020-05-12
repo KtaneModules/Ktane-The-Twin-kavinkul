@@ -778,7 +778,8 @@ public class TheTwinScript : MonoBehaviour
 
     private void CalculateTwitchPlaysPoint()
     {
-        if (_modulePair == null)
+		// Updated: 5/11/2020
+		if (_modulePair == null)
         {
             _twitchPlaysBonusPoints = 0;
             return;
@@ -789,16 +790,16 @@ public class TheTwinScript : MonoBehaviour
         switch(_swapCase)
         {
             case 0: //Red Case
-                bonusPoints = 0.5f * totalModules;
+                bonusPoints = 1f * totalModules;
                 break;
             case 1: //Green Case
                 bonusPoints = 5f;
                 break;
             case 2: //Blue Case
-                bonusPoints = 0.25f * totalModules;
+                bonusPoints = 1f * totalModules;
                 break;
             case 3: //Yellow Case
-                bonusPoints = 0.5f * totalModules;
+                bonusPoints = 1.25f * totalModules;
                 break;
         }
         _twitchPlaysBonusPoints = Math.Max(5, Mathf.RoundToInt(bonusPoints));
