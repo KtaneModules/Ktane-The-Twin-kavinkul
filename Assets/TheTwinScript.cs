@@ -832,12 +832,12 @@ public class TheTwinScript : MonoBehaviour
             yield break;
         }
         string[] parameters = command.Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
-        if (Regex.IsMatch(parameters[0], "submit", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) && parameters.Length >= 2)
+        if (Regex.IsMatch(parameters[0], @"^submit$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) && parameters.Length >= 2)
         {
             string submitSequence = "";
             for (int i = 0; i < parameters.Length - 1; i++)
                 submitSequence += parameters[i + 1];
-            if (!Regex.IsMatch(submitSequence, @"\d+", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+            if (!Regex.IsMatch(submitSequence, @"^\d+$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
             {
                 yield return "sendtochaterror Unexpected characters was detected.";
                 yield break;
