@@ -20,6 +20,7 @@ public class TheTwinScript : MonoBehaviour
     public FakeStatusLight FakeStatusLight;
     public GameObject ScreensAndButtons;
     public GameObject[] ButtonObjects;
+    public KMSelectable[] ButtonSelectables;
     public TextMesh StageDisplay;
     public TextMesh ModulePairIdDisplay;
     public Renderer ModuleBackground;
@@ -139,7 +140,7 @@ public class TheTwinScript : MonoBehaviour
         {
             int j = index;
             _isPressed[j] = false;
-            ButtonObjects[index].GetComponent<KMSelectable>().OnInteract += delegate () { PressButton(j); return false; };
+            ButtonSelectables[index].OnInteract += delegate () { PressButton(j); return false; };
         }
 
         FakeStatusLight = Instantiate(FakeStatusLight);
@@ -257,16 +258,15 @@ public class TheTwinScript : MonoBehaviour
         List<KMSelectable> selectableList = new List<KMSelectable>();
         for (int row = 0; row < 2; row++)
             for (int col = 4; col >= 0; col--)
-                selectableList.Add(ButtonObjects[5 * row + col].GetComponent<KMSelectable>());
+                selectableList.Add(ButtonSelectables[5 * row + col]);
         MainSelectable.Children = selectableList.ToArray();
         MainSelectable.UpdateChildren();
-        Debug.LogFormat("Selectable {0}", transform.GetComponent<KMSelectable>().Children[1]);
     }
 
     private void PressButton(int index)
     {
         if (_isPressed[index]) return;
-        ButtonObjects[index].GetComponent<KMSelectable>().AddInteractionPunch(0.125f);
+        ButtonSelectables[index].AddInteractionPunch(0.125f);
         StartCoroutine(AnimateButton(index));
         if (!_isReady)
         {
@@ -381,7 +381,7 @@ public class TheTwinScript : MonoBehaviour
     {
         _isPressed[index] = true;
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, transform);
-        ButtonObjects[index].GetComponent<KMSelectable>().Highlight.transform.localPosition -= new Vector3(0, .05f, 0); 
+        ButtonSelectables[index].Highlight.transform.localPosition -= new Vector3(0, .05f, 0); 
         for (int count = 0; count < 6; count++)
         {
             ButtonObjects[index].transform.localPosition -= new Vector3(0,.00067f,0);
@@ -392,7 +392,7 @@ public class TheTwinScript : MonoBehaviour
             ButtonObjects[index].transform.localPosition += new Vector3(0, .00067f, 0);
             yield return new WaitForSeconds(.005f);
         }
-        ButtonObjects[index].GetComponent<KMSelectable>().Highlight.transform.localPosition += new Vector3(0, .05f, 0);
+        ButtonSelectables[index].Highlight.transform.localPosition += new Vector3(0, .05f, 0);
         _isPressed[index] = false;
     }
 
@@ -849,7 +849,7 @@ public class TheTwinScript : MonoBehaviour
                 while (_isPressed[index])
                     yield return new WaitForSeconds(0.1f);
                 yield return "trycancel";
-                ButtonObjects[index].GetComponent<KMSelectable>().OnInteract();
+                ButtonSelectables[index].OnInteract();
                 yield return new WaitForSeconds(0.1f);
                 yield return "Solve";
                 if (_modulePair != null)
