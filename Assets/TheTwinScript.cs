@@ -778,8 +778,8 @@ public class TheTwinScript : MonoBehaviour
 
     private void CalculateTwitchPlaysPoint()
     {
-		// Updated: 5/11/2020
-		if (_modulePair == null)
+        // Updated: 5/11/2020
+        if (_modulePair == null)
         {
             _twitchPlaysBonusPoints = 0;
             return;
