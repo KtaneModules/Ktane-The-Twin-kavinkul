@@ -665,7 +665,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4000010493353258, guid: 6565c8153fb4f3f4eaafc1381b3d6c79, type: 2}
       propertyPath: m_RootOrder
-      value: 6
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1000012373772858, guid: 6565c8153fb4f3f4eaafc1381b3d6c79, type: 2}
       propertyPath: m_IsActive
@@ -839,7 +839,7 @@ Transform:
   - {fileID: 1060774725}
   - {fileID: 545181591}
   m_Father: {fileID: 0}
-  m_RootOrder: 5
+  m_RootOrder: 6
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &1644317678
 Prefab:

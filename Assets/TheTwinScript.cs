@@ -91,6 +91,9 @@ public class TheTwinScript : MonoBehaviour
     private bool _allowTPInteraction = true;
     private int _twitchPlaysBonusPoints = 0;
 
+    //Twitch Plays
+    private bool TwitchPlaysActive;
+
     //Logging
     static int moduleIdCounter = 1;
     private int _moduleId;
@@ -459,7 +462,7 @@ public class TheTwinScript : MonoBehaviour
     {
         _modulePair = module.ElementAt(0);
         if (_moduleId < _modulePair._moduleId)
-            _swapCase = Rnd.Range(0, 4);
+            _swapCase = TwitchPlaysActive ? Rnd.Range(1, 4) : Rnd.Range(0, 4);
         else
         {
             while (!_modulePair._assignedRNG)
