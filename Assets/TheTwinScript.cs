@@ -26,6 +26,9 @@ public class TheTwinScript : MonoBehaviour
     public Renderer ModuleBackground;
     public Material[] BackgroundColor;
     public KMSelectable MainSelectable;
+    public GameObject ColorblindTextObject;
+    public TextMesh[] ColorblindTexts; // Stage Display - 0, Module ID - 1, Background - 2
+    public KMColorblindMode ColorblindMode;
 
     sealed class TheTwinSettings
     {
@@ -47,7 +50,7 @@ public class TheTwinScript : MonoBehaviour
     private int _startingNumber;
     private int _stageZeroScreenNumber;
     private int _sequenceLength = 0;
-    private int _totalModules;
+    private int _totalStages;
     private string _finalSequence = "";
     private string _removeSet = "";
     private string[] _ignoredModules;
@@ -90,6 +93,7 @@ public class TheTwinScript : MonoBehaviour
     private readonly string[] _colorNames = new string[7] { "Red", "Green", "Blue", "Yellow", "White", "Purple", "Emerald" };
     private bool _allowTPInteraction = true;
     private int _twitchPlaysBonusPoints = 0;
+    private bool _colorblind;
 
     //Twitch Plays
     private bool TwitchPlaysActive;
@@ -110,6 +114,9 @@ public class TheTwinScript : MonoBehaviour
 
     void Start () 
     {
+        _colorblind = ColorblindMode.ColorblindModeActive;
+        if (_colorblind)
+            ColorblindTextObject.SetActive(true);
         if (_ignoredModules == null)
             _ignoredModules = BossHandler.GetIgnoredModules("The Twin", new string[]{
                 "14",
@@ -190,9 +197,9 @@ public class TheTwinScript : MonoBehaviour
 
         Module.OnActivate += delegate ()
         {
-            _totalModules = Info.GetSolvableModuleNames().Where(a => !_ignoredModules.Contains(a)).ToList().Count;
-            Debug.LogFormat("[The Twin #{0}] There are {1} non-ignored modules.", _moduleId, _totalModules);
-            if (_totalModules < 2)
+            _totalStages = Math.Min(Info.GetSolvableModuleNames().Where(a => !_ignoredModules.Contains(a)).ToList().Count, 101);
+            Debug.LogFormat("[The Twin #{0}] There are {1} non-ignored modules.", _moduleId, _totalStages);
+            if (_totalStages < 2)
             {
                 Debug.LogFormat("[The Twin #{0}] Too few non-ignored modules. Solving the module.", _moduleId);
                 _autoSolved = true;
@@ -201,7 +208,7 @@ public class TheTwinScript : MonoBehaviour
             else
             {
                 _isActivated = true;
-                _sequenceLength = 2 * (_totalModules - 1);
+                _sequenceLength = 2 * (_totalStages - 1);
                 Debug.LogFormat("[The Twin #{0}] The initial remove set is {1}.", _moduleId, _removeSet);
                 Generate();
             }
@@ -218,7 +225,7 @@ public class TheTwinScript : MonoBehaviour
         }
         if (_moduleSolved || !_isActivated || !_cycleCompleted || _isReady) return;
         int solveCount = Info.GetSolvedModuleNames().Where(a => !_ignoredModules.Contains(a)).ToList().Count;
-        if (_totalModules == solveCount && _currentStage >= solveCount)
+        if (_totalStages == solveCount && _currentStage >= solveCount)
         {
             if (_activeCoroutines.Count != 0)
             {
@@ -231,13 +238,16 @@ public class TheTwinScript : MonoBehaviour
             _isReady = true;
             UpdateStageScreen("--");
             ModuleBackground.material = BackgroundColor[0];
+            ColorblindTexts[2].text = "A";
+            ColorblindTexts[2].color = Color.white;
             StageDisplay.color = Color.white;
+            ColorblindTexts[0].text = "W";
             return;
         }
         if (_currentStage < solveCount)
         {
             _currentStage++;
-            if (_currentStage == _totalModules) return;
+            if (_currentStage == _totalStages) return;
             _cycleCompleted = false;
             UpdateStageScreen(_currentStage);
             if (_activeCoroutines.Count != 0)
@@ -361,7 +371,10 @@ public class TheTwinScript : MonoBehaviour
         {
             StopCoroutine(_activeCoroutines.Last());
             ModuleBackground.material = BackgroundColor[0];
+            ColorblindTexts[2].text = "A";
+            ColorblindTexts[2].color = Color.white;
             StageDisplay.color = Color.white;
+            ColorblindTexts[0].text = "W";
             _activeCoroutines.Clear();
         }
     }
@@ -432,11 +445,7 @@ public class TheTwinScript : MonoBehaviour
             else
                 tries++;
         }
-
-        string colorLogging = " | ";
-        for (int index = 0; index < _stageColor.Count(); index++)
-            colorLogging += (_colorNames[_stageColor[index] - 1] + " | ");
-        Debug.LogFormat("[The Twin #{0}] The list of background colors in the sequence phase is [{1}]", _moduleId, colorLogging);
+        Debug.LogFormat("[The Twin #{0}] The list of background colors in the sequence phase is [{1}]", _moduleId, string.Join(", ", _stageColor.Select(color => _colorNames[color - 1]).ToArray()));
     }
 
     private void Generate()
@@ -476,6 +485,7 @@ public class TheTwinScript : MonoBehaviour
         {
             case 0: //Manipulating digits in final sequences
                 ModulePairIdDisplay.color = Color.red;
+                ColorblindTexts[1].text = "R";
                 Debug.LogFormat("[The Twin #{0}] The ID display is red. Manipulating digits in final sequences.", _moduleId);
                 yield return StartCoroutine(GenerateFinalString());
                 while (!_modulePair._isGenerated)
@@ -512,6 +522,7 @@ public class TheTwinScript : MonoBehaviour
                 break;
             case 1: //Trading the initial number
                 ModulePairIdDisplay.color = Color.green;
+                ColorblindTexts[1].text = "G";
                 Debug.LogFormat("[The Twin #{0}] The ID display is green. Trading the starting number.", _moduleId);
                 var startingNumber = _modulePair._startingNumber;
                 _finishedTrading = true;
@@ -523,6 +534,7 @@ public class TheTwinScript : MonoBehaviour
                 break;
             case 2: //Trading background colors
                 ModulePairIdDisplay.color = Color.blue;
+                ColorblindTexts[1].text = "B";
                 Debug.LogFormat("[The Twin #{0}] The ID display is blue. Trading the background colors after stage 0.", _moduleId);
                 yield return StartCoroutine(GenerateFinalString());
                 var colorList = _modulePair._stageColor;
@@ -530,13 +542,11 @@ public class TheTwinScript : MonoBehaviour
                 while (!_modulePair._finishedTrading)
                     yield return new WaitForSeconds(.1f);
                 _stageColor = new List<int>(colorList);
-                string colorLogging = " | ";
-                for (int index = 0; index < _stageColor.Count(); index++)
-                    colorLogging += (_colorNames[_stageColor[index] - 1] + " | ");
-                Debug.LogFormat("[The Twin #{0}] The list of background colors in the sequence phase is now [{1}]", _moduleId, colorLogging);
+                Debug.LogFormat("[The Twin #{0}] The list of background colors in the sequence phase is now [{1}]", _moduleId, string.Join(", ", _stageColor.Select(color => _colorNames[color - 1]).ToArray()));
                 break;
             case 3: //Trading the remove set
                 ModulePairIdDisplay.color = Color.yellow;
+                ColorblindTexts[1].text = "Y";
                 Debug.LogFormat("[The Twin #{0}] The ID display is yellow. Trading the remove sets.", _moduleId);
                 var removeList = _modulePair._removeSetList;
                 var changeRemoveSet = _modulePair._changeRemoveSet;
@@ -640,7 +650,10 @@ public class TheTwinScript : MonoBehaviour
             int[] color = new int[3] { 0, _stageColor[2 * (_currentStage - 1)], _stageColor[2 * (_currentStage - 1) + 1] };
             bool[] textIsRed = new bool[3] { false, _changeRemoveSet[2 * (_currentStage - 1)], _changeRemoveSet[2 * (_currentStage - 1) + 1] };
             ModuleBackground.material = BackgroundColor[color[backgroundCycleStep]];
+            ColorblindTexts[2].text = color[backgroundCycleStep] == 0 ? "A" : _colorNames[color[backgroundCycleStep] - 1][0].ToString();
+            ColorblindTexts[2].color = ColorblindTexts[2].text == "W" ? Color.black : Color.white;
             StageDisplay.color = textIsRed[backgroundCycleStep] ? Color.red : Color.white;
+            ColorblindTexts[0].text = textIsRed[backgroundCycleStep] ? "R" : "W";
             backgroundCycleStep = (backgroundCycleStep + 1) % 3;
             yield return new WaitForSeconds(1);
             if (backgroundCycleStep == 0)
@@ -659,7 +672,10 @@ public class TheTwinScript : MonoBehaviour
             {
                 UpdateStageScreen(index / 2 + 1);
                 ModuleBackground.material = BackgroundColor[_stageColor[index]];
+                ColorblindTexts[2].text = _stageColor[index] == 0 ? "A" : _colorNames[_stageColor[index] - 1][0].ToString();
+                ColorblindTexts[2].color = ColorblindTexts[2].text == "W" ? Color.black : Color.white;
                 StageDisplay.color = _changeRemoveSet[index] ? Color.red : Color.white;
+                ColorblindTexts[0].text = _changeRemoveSet[index] ? "R" : "W";
                 yield return new WaitForSeconds(1);
             }
             _activeCoroutines.Add(DisplayCode(_currentDigit + 1));
@@ -692,6 +708,8 @@ public class TheTwinScript : MonoBehaviour
         string[] morseCode = new string[10] { "-----", ".----", "..---", "...--", "....-", ".....", "-....", "--...", "---..", "----." };
         float dotLength = .27f;
         ModuleBackground.material = BackgroundColor[0];
+        ColorblindTexts[2].color = Color.white;
+        ColorblindTexts[2].text = "A";
         yield return new WaitForSeconds(dotLength * 3);
         do
         {
@@ -701,11 +719,15 @@ public class TheTwinScript : MonoBehaviour
                 for (int step = 0; step < 5; step++)
                 {
                     ModuleBackground.material = BackgroundColor[colorOrder[_startingCoordinate[0]][step]];
+                    ColorblindTexts[2].text = _colorNames[colorOrder[_startingCoordinate[0]][step] - 1][0].ToString();
+                    ColorblindTexts[2].color = ColorblindTexts[2].text == "W" ? Color.black : Color.white;
                     if (morseCode[_startingCoordinate[1]][step] == '-')
                         yield return new WaitForSeconds(dotLength * 3);
                     else
                         yield return new WaitForSeconds(dotLength);
                     ModuleBackground.material = BackgroundColor[0];
+                    ColorblindTexts[2].color = Color.white;
+                    ColorblindTexts[2].text = "A";
                     yield return new WaitForSeconds(dotLength);
                 }
                 yield return new WaitForSeconds(dotLength * 2);
@@ -721,11 +743,15 @@ public class TheTwinScript : MonoBehaviour
                     for (int step = 0; step < 5; step++)
                     {
                         ModuleBackground.material = BackgroundColor[5];
+                        ColorblindTexts[2].color = Color.black;
+                        ColorblindTexts[2].text = _colorNames[4][0].ToString();
                         if (morseCode[digit][step] == '-')
                             yield return new WaitForSeconds(dotLength * 3);
                         else
                             yield return new WaitForSeconds(dotLength);
                         ModuleBackground.material = BackgroundColor[0];
+                        ColorblindTexts[2].text = "A";
+                        ColorblindTexts[2].color = Color.white;
                         yield return new WaitForSeconds(dotLength);
                     }
                     yield return new WaitForSeconds(dotLength * 2);
@@ -787,29 +813,29 @@ public class TheTwinScript : MonoBehaviour
             _twitchPlaysBonusPoints = 0;
             return;
         }
-        //For consistency with Twitch Plays, count all solvable modules including ignored modules.
-        int totalModules = Info.GetSolvableModuleNames().Count;
+        //Limiting points to at most 102 solvable modules including ignored modules and Twin.
+        int totalStages = Math.Min(Info.GetSolvableModuleNames().Count, 102);
         float bonusPoints = 0;
         switch(_swapCase)
         {
             case 0: //Red Case
-                bonusPoints = 1f * totalModules;
+                bonusPoints = 1f * totalStages;
                 break;
             case 1: //Green Case
                 bonusPoints = 5f;
                 break;
             case 2: //Blue Case
-                bonusPoints = 1f * totalModules;
+                bonusPoints = 1f * totalStages;
                 break;
             case 3: //Yellow Case
-                bonusPoints = 1.25f * totalModules;
+                bonusPoints = 1.25f * totalStages;
                 break;
         }
         _twitchPlaysBonusPoints = Math.Max(5, Mathf.RoundToInt(bonusPoints));
     }
 
     #pragma warning disable 414
-    private readonly string TwitchHelpMessage = "Use !{0} submit 12 6 7 to submit 1267. The number must be in the range 0 - 9.";
+    private readonly string TwitchHelpMessage = "Use !{0} submit 12 6 7 to submit 1267. The number must be in the range 0 - 9. Use colorblind/colourblind/cb to enable colorblind mode.";
     #pragma warning restore 414
 
     public IEnumerator TwitchHandleForcedSolve()
@@ -834,6 +860,16 @@ public class TheTwinScript : MonoBehaviour
             yield return "sendtochaterror This module is currently being solved.";
             yield break;
         }
+        if (Regex.IsMatch(command, @"^colou?rblind|cb$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            yield return null;
+            if (!_colorblind)
+            {
+                _colorblind = true;
+                ColorblindTextObject.SetActive(true);
+            }
+            yield break;
+        }
         string[] parameters = command.Split(new char[] {' '}, StringSplitOptions.RemoveEmptyEntries);
         if (Regex.IsMatch(parameters[0], @"^submit$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant) && parameters.Length >= 2)
         {
@@ -856,7 +892,7 @@ public class TheTwinScript : MonoBehaviour
                 yield return new WaitForSeconds(0.1f);
                 yield return "Solve";
                 if (_modulePair != null)
-                    yield return String.Format("awardpointsonsolve {0}", _twitchPlaysBonusPoints);
+                    yield return string.Format("awardpointsonsolve {0}", _twitchPlaysBonusPoints);
             }
         }
         else
