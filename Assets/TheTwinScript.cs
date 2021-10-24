@@ -504,20 +504,15 @@ public class TheTwinScript : MonoBehaviour
                     for (int index = 0; index < finalSequenceLength; index++)
                     {
                         if (finalSequence[index] > otherFinalSequence[index])
-                        {
                             finalSequence[index] = otherFinalSequence[index];
-                            _finalSequence = finalSequence.ToString() ;
-                        }
                     }
                 else
                     for (int index = 0; index < finalSequenceLength; index++)
                     {
                         if (finalSequence[index] < otherFinalSequence[index])
-                        {
                             finalSequence[index] = otherFinalSequence[index];
-                            _finalSequence = finalSequence.ToString();
-                        }
                     }
+                _finalSequence = finalSequence.ToString();
                 Debug.LogFormat("[The Twin #{0}] The final sequence is now {1}.", _moduleId, _finalSequence);
                 break;
             case 1: //Trading the initial number
